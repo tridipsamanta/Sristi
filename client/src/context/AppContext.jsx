@@ -1,43 +1,56 @@
-import { createContext, useContext, useEffect } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
+
+import api from "../api/api.js";
 
 const AppContext = createContext(undefined);
 
-export function AppContextProvider({Children}){
+export function AppContextProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
 
-        // Authcontext
-        const [user,setUser] = useState(null)
-        const [loadingUser , setLoadingUser] = useState(true);
+  const checkSession = useCallback(async () => {
+    try {
+      const { data } = await api.get("/api/auth/me");
+      setUser(data.user);
+    } catch (error) {
+      setUser(null);
+    } finally {
+      setLoadingUser(false);
+    }
+  }, []);
 
-        // Auth Actions
-        const checkSession = async ()=>{
-            try {
-                    const {data} = await api.get("/api/auth/me")
-                    //setUser(data.user);
+  useEffect(() => {
+    checkSession();
+  }, [checkSession]);
 
-            } catch (error) {
-                setUser(null)
-            }finally{
-                setLoadingUser(false)
-            }
-        }
-
-        useEffect(()=>{
-            checkSession()
-        },[checkSession])
-    return(
-       <AppContext.Provider value={{
+  return (
+    <AppContext.Provider
+      value={{
         user,
-        loadingUser
-       }}>
-        {Children}
-       </AppContext.Provider>
-    )
+        setUser,
+        loadingUser,
+        checkSession,
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
 }
 
-export function useAppContext(){
-    const context = useContext(AppContext)
-    if(context === undefined){
-        throw new Error("useAppContext must be used within an AppContextProvider");
-    }
-    return context;
+export function useAppContext() {
+  const context = useContext(AppContext);
+
+  if (context === undefined) {
+    throw new Error(
+      "useAppContext must be used within an AppContextProvider"
+    );
+  }
+
+  return context;
 }
